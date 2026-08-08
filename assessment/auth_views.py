@@ -7,8 +7,9 @@ Endpoints:
   POST /api/auth/logout/    — clear session
   GET  /api/auth/me/        — return current user info (or 401)
 """
-
 from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 
@@ -17,7 +18,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@ensure_csrf_cookie
+def csrf_token(request):
+    return JsonResponse({'detail': 'CSRF cookie set'})
+  
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
