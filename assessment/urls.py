@@ -7,9 +7,11 @@ from . import analytics_views
 
 app_name = 'assessment'
 
+
 urlpatterns = [
     # Authentication
     path('csrf/', auth_views.csrf_token, name='csrf-token'),
+    
     path('auth/register/', auth_views.register, name='register'),
     path('auth/login/', auth_views.login_view, name='login'),
     path('auth/logout/', auth_views.logout_view, name='logout'),
