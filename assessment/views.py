@@ -6,7 +6,15 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.http import JsonResponse
 
+@ensure_csrf_cookie
+def csrf(request):
+    return JsonResponse({"detail": "CSRF cookie set"})
+    path("csrf/", csrf),
+    api.get('/csrf/');
+    
 from .models import (
     AssessmentSession, ActivityResponse, DomainScore,
     ThinkingStyle, ValidationResponse, DeepDiveChat,
