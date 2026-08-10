@@ -8,6 +8,20 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import JsonResponse
+from django.middleware.csrf import get_token
+
+from rest_framework.permissions import AllowAny
+
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def csrf_token(request):
+    token = get_token(request)
+
+    return Response({
+        'csrfToken': token
+    })
 
 @ensure_csrf_cookie
 def csrf(request):
