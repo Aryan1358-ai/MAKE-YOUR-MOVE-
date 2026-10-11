@@ -1,9 +1,12 @@
-from django.middleware.csrf import get_token
-from django.http import JsonResponse
 
+import json
 import logging
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 logger = logging.getLogger(__name__)
+from django.middleware.csrf import get_token
+from django.http import JsonResponse
 
 """
 Authentication API views using Django's built-in User model.
@@ -162,25 +165,63 @@ def register(request):
                 expires_at=now + OTP_TTL,
                 resend_available_at=now + OTP_RESEND_COOLDOWN,
             )
-            _send_otp(email, otp)
-    except IntegrityError:
-        return Response(
-            {'error': 'An account with this email already exists.'},
-            status=status.HTTP_409_CONFLICT,
-        )
-    except (ImproperlyConfigured, SMTPException, OSError, ValueError):
-        return Response(
-            {'error': 'Verification email could not be sent. Please try again later.'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+
+def _send_otp(email, otp):
+    service_id = settings.EMAILJS_SERVICE_ID
+    template_id = settings.EMAILJS_TEMPLATE_ID
+    public_key = settings.EMAILJS_PUBLIC_KEY
+    private_key = settings.EMAILJS_PRIVATE_KEY
+
+    if not all([service_id, template_id, public_key, private_key]):
+        raise ImproperlyConfigured(
+            "EmailJS environment variables are not configured."
         )
 
-    return Response({
-        'message': 'Verification code sent.',
-        'email': email,
-        'requires_verification': True,
-        'resend_available_in': int(OTP_RESEND_COOLDOWN.total_seconds()),
-    }, status=status.HTTP_201_CREATED)
+    payload = {
+        "service_id": service_id,
+        "template_id": template_id,
+        "user_id": public_key,
+        "accessToken": private_key,
+        "template_params": {
+            "to_email": email,
+            "otp": otp,
+        },
+    }
 
+    request = Request(
+        "https://api.emailjs.com/api/v1.0/email/send",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urlopen(request, timeout=15) as response:
+            if response.status != 200:
+                raise SMTPException(
+                    "Verification email was not accepted."
+                )
+        return 1
+
+    except HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        logger.error(
+            "EmailJS failed: HTTP %s — %s",
+            exc.code,
+            error_body[:1000],
+        )
+        raise SMTPException(
+            f"EmailJS failed with HTTP {exc.code}."
+        ) from exc
+
+    except (URLError, TimeoutError) as exc:
+        logger.error(
+            "EmailJS connection failed: %s",
+            type(exc).__name__,
+        )
+        raise SMTPException(
+            "Could not connect to EmailJS."
+        ) from exc
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
