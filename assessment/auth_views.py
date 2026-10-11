@@ -65,16 +65,23 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 
-def _send_otp(email, otp):
-    service_id = settings.EMAILJS_SERVICE_ID
-    template_id = settings.EMAILJS_TEMPLATE_ID
-    public_key = settings.EMAILJS_PUBLIC_KEY
-    private_key = settings.EMAILJS_PRIVATE_KEY
 
-    if not all([service_id, template_id, public_key, private_key]):
-        raise ImproperlyConfigured(
-            "EmailJS environment variables are not configured."
+    except HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        logger.error(
+            "EmailJS failed: HTTP %s — %s",
+            exc.code,
+            error_body[:1000],
         )
+        raise SMTPException(
+            f"EmailJS failed with HTTP {exc.code}."
+        ) from exc
+
+    except (URLError, TimeoutError) as exc:
+        logger.error("EmailJS connection failed: %s", type(exc).__name__)
+        raise SMTPException(
+            "Could not connect to EmailJS."
+        ) from exc
 
     payload = {
         "service_id": service_id,
