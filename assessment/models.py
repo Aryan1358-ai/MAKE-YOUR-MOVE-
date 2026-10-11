@@ -41,6 +41,12 @@ class AssessmentSession(models.Model):
     def __str__(self):
         return f"Session {self.id} - Stage: {self.current_stage}"
 
+    primary_domain = models.CharField(max_length=20, blank=True, null=True,
+        help_text="Internally ranked #1 domain, set after scoring")
+    top_three_domains = models.JSONField(default=list, blank=True,
+        help_text="Ranked top 3 domain keys, hidden until deep dive completes")
+    deep_dive_completed = models.BooleanField(default=False)
+
 
 class ActivityResponse(models.Model):
     """Stores raw interaction data for each of the 6 pre-assessment activities."""
@@ -234,3 +240,21 @@ class DeepDiveChat(models.Model):
 
     def __str__(self):
         return f"DeepDive {self.domain} - {self.session_id} ({self.status})"
+
+    structured_evidence = models.JSONField(default=dict, blank=True,
+        help_text="Extracted evidence: projects, technologies, responsibilities, etc.")
+    insight_summary = models.TextField(blank=True, default='',
+        help_text="AI-generated user insight summary, persisted for refresh")
+
+
+class EmailOTP(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='email_otp',
+    )
+    otp_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    resend_available_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)

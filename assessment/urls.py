@@ -13,6 +13,8 @@ urlpatterns = [
     path('csrf/', auth_views.csrf_token, name='csrf-token'),
     
     path('auth/register/', auth_views.register, name='register'),
+    path('auth/verify-otp/', auth_views.verify_otp, name='verify-otp'),
+    path('auth/resend-otp/', auth_views.resend_otp, name='resend-otp'),
     path('auth/login/', auth_views.login_view, name='login'),
     path('auth/logout/', auth_views.logout_view, name='logout'),
     path('auth/me/', auth_views.me, name='me'),
@@ -41,6 +43,7 @@ urlpatterns = [
     path('roadmap/<str:domain>/', views.get_roadmap, name='roadmap'),
 
     # Deep-Dive Chat
+    path('deep-dive/domain/', views.get_deep_dive_domain, name='deep-dive-domain'),
     path('deep-dive/<str:domain>/start/', views.start_deep_dive, name='start-deep-dive'),
     path('deep-dive/<str:domain>/message/', views.send_deep_dive_message, name='deep-dive-message'),
     path('deep-dive/<str:domain>/skip/', views.skip_deep_dive, name='skip-deep-dive'),

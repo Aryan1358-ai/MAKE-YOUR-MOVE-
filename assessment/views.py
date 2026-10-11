@@ -633,3 +633,22 @@ def skip_deep_dive(request, domain):
         'wrap_up': wrap_up,
         'message': 'Deep-dive skipped.',
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_deep_dive_domain(request):
+    """Return the backend-selected primary domain for the deep dive."""
+    session = _get_or_create_session(request)
+    if not session:
+        return Response({'error': 'No active session.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if not session.primary_domain:
+        return Response(
+            {'error': 'Primary domain not set. Complete activities and view thinking styles first.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return Response({
+        'domain': session.primary_domain,
+    })
