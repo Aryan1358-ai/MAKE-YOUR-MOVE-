@@ -1,5 +1,10 @@
 from django.middleware.csrf import get_token
 from django.http import JsonResponse
+
+import logging
+
+logger = logging.getLogger(__name__)
+
 """
 Authentication API views using Django's built-in User model.
 
