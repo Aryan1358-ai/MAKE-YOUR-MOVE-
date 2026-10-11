@@ -54,17 +54,53 @@ def _new_otp():
     return f'{secrets.randbelow(10 ** OTP_LENGTH):0{OTP_LENGTH}d}'
 
 
-def _send_otp(email, otp):
-    sent = send_mail(
-        'Your MakeYourMove verification code',
-        f'Your verification code is {otp}. It expires in 10 minutes.',
-        settings.DEFAULT_FROM_EMAIL,
-        [email],
-        fail_silently=False,
-    )
-    if sent != 1:
-        raise SMTPException('Verification email was not accepted for delivery.')
 
+import json
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
+
+
+def _send_otp(email, otp):
+    service_id = settings.EMAILJS_SERVICE_ID
+    template_id = settings.EMAILJS_TEMPLATE_ID
+    public_key = settings.EMAILJS_PUBLIC_KEY
+    private_key = settings.EMAILJS_PRIVATE_KEY
+
+    if not all([service_id, template_id, public_key, private_key]):
+        raise ImproperlyConfigured(
+            "EmailJS environment variables are not configured."
+        )
+
+    payload = {
+        "service_id": service_id,
+        "template_id": template_id,
+        "user_id": public_key,
+        "accessToken": private_key,
+        "template_params": {
+            "to_email": email,
+            "otp": otp,
+        },
+    }
+
+    request = Request(
+        "https://api.emailjs.com/api/v1.0/email/send",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urlopen(request, timeout=15) as response:
+            if response.status != 200:
+                raise SMTPException(
+                    "Verification email was not accepted for delivery."
+                )
+        return 1
+
+    except (HTTPError, URLError, TimeoutError) as exc:
+        raise SMTPException(
+            "EmailJS could not send the verification email."
+        ) from exc
 
 def _validated_email(value):
     if not isinstance(value, str):
